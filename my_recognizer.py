@@ -1,4 +1,5 @@
 import warnings
+import numpy as np
 from asl_data import SinglesData
 
 
@@ -20,6 +21,20 @@ def recognize(models: dict, test_set: SinglesData):
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     probabilities = []
     guesses = []
-    # TODO implement the recognizer
-    # return probabilities, guesses
-    raise NotImplementedError
+    for s in test_set.get_all_Xlengths():
+
+        scores = {}
+        for m in models:
+            try:
+                X, lengths = test_set.get_all_Xlengths()[s]
+                scores[m] = models[m].score(X, lengths)
+            except ValueError as e:
+                print('{} : when training model {}, setting loglik to -inf'.format(
+                    e, m))
+                scores[m] = -np.inf
+
+        probabilities.append(scores)
+        key, _ = max(scores.items(), key=lambda x: x[1])
+        guesses.append(key)
+
+    return probabilities, guesses
