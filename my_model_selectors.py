@@ -91,12 +91,11 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         models = [self.base_model(i)
-                  for i in range(self.min_n_components, self.max_n_components)]
+                  for i in range(self.min_n_components, self.max_n_components+1)]
         try:
             bic = [-2*m.score(self.X, self.lengths) + calc_num_para(m) *np.log(len(self.X))
                    for m in models]
-        except ValueError as e:
-            print('{} - using the default number of components instead'.format(e))
+        except (ValueError, AttributeError) as e:
             return models[self.n_constant]
 
         return models[bic.index(min(bic))]
@@ -130,14 +129,13 @@ class SelectorDIC(ModelSelector):
 
 
         models = [self.base_model(i)
-                  for i in range(self.min_n_components, self.max_n_components)]
+                  for i in range(self.min_n_components, self.max_n_components+1)]
 
         try:
             dic_scores = [det_dic_error(m) for m in models]
             return models[dic_scores.index(max(dic_scores))]
 
-        except ValueError as e:
-            print('{} - using the default number of components instead'.format(e))
+        except (ValueError, AttributeError) as e:
             return models[self.n_constant]
 
 
@@ -145,6 +143,23 @@ class SelectorCV(ModelSelector):
     ''' select best model based on average log Likelihood of cross-validation folds
 
     '''
+
+    def base_model(self, num_states):
+        # with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        # warnings.filterwarnings("ignore", category=RuntimeWarning)
+        try:
+            hmm_model = GaussianHMM(
+                n_components=num_states, covariance_type="diag", n_iter=1000,
+                random_state=self.random_state, verbose=False)
+            if self.verbose:
+                print("model created for {} with {} states".format(
+                    self.this_word, num_states))
+            return hmm_model
+        except:
+            if self.verbose:
+                print("failure on {} with {} states".format(self.this_word, num_states))
+            return None
 
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -162,13 +177,13 @@ class SelectorCV(ModelSelector):
 
 
         models = [self.base_model(i)
-                  for i in range(self.min_n_components, self.max_n_components)]
+                  for i in range(self.min_n_components, self.max_n_components+1)]
 
         try:
             cv_scores = [det_cv_error(m) for m in models]
-            return models[cv_scores.index(min(cv_scores))]
+            model = models[cv_scores.index(max(cv_scores))]
+            return model.fit(self.X, self.lengths)
 
-        except ValueError as e:
-            print('{} - using the default number of components instead'.format(e))
+        except (ValueError, AttributeError) as e:
             return models[self.n_constant]
 

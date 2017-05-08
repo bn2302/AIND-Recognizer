@@ -28,9 +28,7 @@ def recognize(models: dict, test_set: SinglesData):
             try:
                 X, lengths = test_set.get_all_Xlengths()[s]
                 scores[m] = models[m].score(X, lengths)
-            except ValueError as e:
-                print('{} : when training model {}, setting loglik to -inf'.format(
-                    e, m))
+            except (ValueError, AttributeError) as e:
                 scores[m] = -np.inf
 
         probabilities.append(scores)
